@@ -5,12 +5,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Project paths
-PROJECT_DIR = Path(__file__).parent
+PROJECT_DIR = Path(__file__).resolve().parent  # resolve for safety on Windows
 MEMORY_FILE = PROJECT_DIR / "memory.json"
 PROMPTS_FILE = PROJECT_DIR / "prompts.yaml"
 
-# Load environment variables from .env file
-load_dotenv(PROJECT_DIR / ".env")
+# Load environment variables from .env file with encoding fallbacks
+env_path = PROJECT_DIR / ".env"
+if env_path.exists():
+    # Try UTF-8 first (no BOM), then common fallbacks on Windows
+    for enc in ("utf-8", "utf-8-sig", "utf-16", "utf-16-le", "utf-16-be"):
+        try:
+            load_dotenv(env_path, override=True, encoding=enc)
+            break
+        except UnicodeDecodeError:
+            continue
 
 # Mistral API configuration
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
@@ -23,7 +31,7 @@ MEMORY_KEEP_LAST_N = 10   # Keep last N messages after summarization
 # Load prompts from YAML
 def load_prompts():
     """Load prompts from YAML file."""
-    with open(PROMPTS_FILE, 'r') as f:
+    with open(PROMPTS_FILE, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 # Logging configuration
